@@ -1,4 +1,5 @@
 # DeepBBS
+![](misc/animation.gif)
 ## Introduction
 This repository contains python scripts for training and testing DeepBBS
 
