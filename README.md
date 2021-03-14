@@ -17,7 +17,7 @@ or can be install the environment.yml file:
 conda env create -f environment.yml
 ```
 ## Testing
-In every test, for testing DeepBBS++ use the argument --DeepBBS_pp=True. For testing DeepBBS use --DeepBBS_pp=False
+In every test, for testing DeepBBS++ use the argument *--DeepBBS_pp*. For testing DeepBBS use *--DeepBBS* instead.
 #### Unseen Point Clouds
 Weights can be downloaded from [here](https://drive.google.com/file/d/1-jQX1sJAejKQi_pVU2S3hp4nlv-1VKwX/view?usp=sharing).
 ```shell
