@@ -21,17 +21,17 @@ In every test, for testing DeepBBS++ use the argument --DeepBBS_pp=True. For tes
 #### Unseen Point Clouds
 Weights can be downloaded from [here](https://drive.google.com/file/d/1-jQX1sJAejKQi_pVU2S3hp4nlv-1VKwX/view?usp=sharing).
 ```shell
-python main.py --n_subsampled_points=768 --DeepBBS_pp=True --model_path=./pretrained/unseen_point_clouds.t7 --eval
+python main.py --n_subsampled_points=768 --DeepBBS_pp --model_path=./pretrained/unseen_point_clouds.t7 --eval
 ```
 #### Unseen Categories
 Weights can be downloaded from [here](https://drive.google.com/file/d/1igE2iVALsmvR1WP0GkJqltF-uEmvVmLI/view?usp=sharing).
 ```shell
-python main.py --n_subsampled_points=768 --DeepBBS_pp=True --unseen=True --model_path=./pretrained/unseen_categories.t7 --eval
+python main.py --n_subsampled_points=768 --DeepBBS_pp --unseen=True --model_path=./pretrained/unseen_categories.t7 --eval
 ```
 #### Gaussian Noise
 Weights can be downloaded from [here](https://drive.google.com/file/d/157wCHrl8ENELOY714RI1jLrzgRpRLu5P/view?usp=sharing).
 ```shell
-python main.py --n_subsampled_points 768 --DeepBBS_pp=True --gaussian_noise=True --model_path=./pretrained/gaussian_noise.t7 --eval
+python main.py --n_subsampled_points 768 --DeepBBS_pp --gaussian_noise=True --model_path=./pretrained/gaussian_noise.t7 --eval
 ```
 #### Different Samplings
 Weights can be downloaded from [here](https://drive.google.com/file/d/1Wgk4Al_W3k-QFeJPMJNXWj-tJvpty8Q7/view?usp=sharing).
@@ -40,20 +40,21 @@ python main.py --DeepBBS_pp=True --different_pc=True --model_path=./pretrained/d
 ```
 
 ## Training
-In every case, for training DeepBBS++ use the argument --DeepBBS_pp=True. For training DeepBBS use --DeepBBS_pp=False
+After training, to evaluate the final results, run a test as described in the 'Testing' chapter (DeepBBS++ or DeepBBS).
+
 #### Unseen Point Clouds
 ```shell
-python main.py --n_subsampled_points=768 --DeepBBS_pp=True --exp_name=unseen_point_clouds
+python main.py --n_subsampled_points=768 --exp_name=unseen_point_clouds
 ```
 #### Unseen Categories
 ```shell
-python main.py --n_subsampled_points=768 --DeepBBS_pp=True --unseen=True --exp_name=unseen_categories
+python main.py --n_subsampled_points=768 --unseen=True --exp_name=unseen_categories
 ```
 #### Gaussian Noise
 ```shell
-python main.py --n_subsampled_points 768 --DeepBBS_pp=True --gaussian_noise=True --exp_name=gaussian_noise
+python main.py --n_subsampled_points 768 --gaussian_noise=True --exp_name=gaussian_noise
 ```
 #### Different Samplings
 ```shell
-python main.py --DeepBBS_pp=True --different_pc=True --exp_name=different_samplings
+python main.py --different_pc=True --exp_name=different_samplings
 ```
