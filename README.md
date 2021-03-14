@@ -40,7 +40,7 @@ python main.py --DeepBBS_pp=True --different_pc=True --model_path=./pretrained/d
 ```
 
 ## Training
-After training, to evaluate the final results, run a test as described in the 'Testing' chapter (DeepBBS++ or DeepBBS).
+In every case, for training DeepBBS++ use the argument *--DeepBBS_pp*. For testing DeepBBS use *--DeepBBS* instead.
 
 #### Unseen Point Clouds
 ```shell
