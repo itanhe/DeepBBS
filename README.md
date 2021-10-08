@@ -1,7 +1,13 @@
 # DeepBBS
 ![](misc/small_animation.gif)
 ## Introduction
-This repository contains python scripts for training and testing DeepBBS
+This repository contains python scripts for training and testing **DeepBBS**. 
+
+DeepBBS is a method for estimating the rigid transformation between two 3D point clouds. It is based on Best Buddies. The Best Buddies criterion is a strong indication for correct matches that, in turn, leads to accurate registration. Instead of finding best buddies in the input 3D space, a neural network is trained to find an embedding space, in which the Best Buddies Similarity measure is computed. Experiments show that DeepBBS is robust to occlusions, has a very large basin of attractions, and achieves state-of-the-art results on several datasets.
+
+For technical details, please refer to: 
+
+**[DeepBBS: Deep Best Buddies for Point Cloud Registration](https://arxiv.org/abs/2110.03016)** (3DV 2021 oral paper).
 
 ## Configuration
 System requirments:
