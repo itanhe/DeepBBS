@@ -13,7 +13,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
 from data import ModelNet40
 from model import DCP, SVDHead_no_network
-from util import npmat2euler, transform_point_cloud
+from util import npmat2euler, transform_point_cloud, cdist_torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import shutil
@@ -35,7 +35,7 @@ def _init_(args):
     shutil.copyfile('data.py', os.path.join(args.checkpoint_dir+'checkpoints', args.exp_name, 'data.py.backup'))
 
 
-def test_one_epoch(args, net, test_loader):
+def test_one_epoch(args, net, test_loader, epoch=0):
     with torch.no_grad():
         net.eval()
         total_loss = 0
@@ -66,7 +66,7 @@ def test_one_epoch(args, net, test_loader):
                 while not_converged:
                     rotation_ab_pred, translation_ab_pred, src_corr = net(transformed_src, target_copy, iter_num)
                     diff = np.mean(np.abs((npmat2euler(rotation_ab_pred.detach().cpu()))))
-                    if diff < 0.4 or iter_num >= 5:
+                    if diff < args.iterative_convergence['deep_min_diff'] or iter_num >= args.iterative_convergence['deep_max_iter']:
                         not_converged = False
                     transformed_src = transform_point_cloud(transformed_src.detach(), rotation_ab_pred.detach(), translation_ab_pred.detach()).detach()
                     R.append(rotation_ab_pred.detach()); T.append(translation_ab_pred.detach())
@@ -87,9 +87,9 @@ def test_one_epoch(args, net, test_loader):
                     else:
                         rotation_ab_pred, translation_ab_pred, src_corr = spatial_step(transformed_src, target_copy, iter=1)
                     diff = np.mean(np.abs((npmat2euler(rotation_ab_pred.detach().cpu()))))
-                    if diff < 0.4 or iter_num >= 5:
+                    if diff < args.iterative_convergence['deep_min_diff'] or iter_num >= args.iterative_convergence['deep_max_iter']:
                         not_converged_deep = False
-                    if (iter_num > 20 and diff<0.01) or iter_num>35:
+                    if (iter_num > args.iterative_convergence['spatial_min_iter'] and diff<args.iterative_convergence['spatial_min_diff']) or iter_num>args.iterative_convergence['spatial_max_iter']:
                         not_converged_spatial = False
                     transformed_src = transform_point_cloud(transformed_src.detach(), rotation_ab_pred.detach(), translation_ab_pred.detach()).detach()
                     R.append(rotation_ab_pred.detach()); T.append(translation_ab_pred.detach())
@@ -109,10 +109,10 @@ def test_one_epoch(args, net, test_loader):
             eulers_ab.append(euler_ab.numpy())
 
             identity = torch.eye(3, device=src.device).unsqueeze(0).repeat(batch_size, 1, 1)
-
+            ind_mask = (cdist_torch(transform_point_cloud(src, rotation_ab, translation_ab), target, points_dim=3).min(dim=2).values < 0.05)
             loss = F.mse_loss(torch.matmul(rotation_ab_pred.transpose(2, 1), rotation_ab), identity) \
                    + F.mse_loss(translation_ab_pred, translation_ab) \
-                   + ((src_corr - transform_point_cloud(src, rotation_ab, translation_ab)) ** 2).sum(dim=1).mean()
+                   + 0.95**epoch * ((src_corr - transform_point_cloud(src, rotation_ab, translation_ab)) ** 2).sum(dim=1).view(-1)[ind_mask.view(-1)].mean()
 
             total_loss += loss.item() * batch_size
 
@@ -125,7 +125,7 @@ def test_one_epoch(args, net, test_loader):
     return total_loss * 1.0 / num_examples, rotations_ab, translations_ab, rotations_ab_pred, translations_ab_pred, eulers_ab
 
 
-def train_one_epoch(args, net, train_loader, opt):
+def train_one_epoch(args, net, train_loader, opt, epoch):
     net.train()
     total_loss = 0
     num_examples = 0
@@ -155,9 +155,12 @@ def train_one_epoch(args, net, train_loader, opt):
         eulers_ab.append(euler_ab.numpy())
 
         identity = torch.eye(3).cuda().unsqueeze(0).repeat(batch_size, 1, 1)
+        ind_mask = (cdist_torch(transform_point_cloud(src, rotation_ab, translation_ab), target, points_dim=3).min(dim=2).values < 0.05)
         loss = F.mse_loss(torch.matmul(rotation_ab_pred.transpose(2, 1), rotation_ab), identity) \
                + F.mse_loss(translation_ab_pred, translation_ab) \
-               + ((src_corr - transform_point_cloud(src, rotation_ab, translation_ab)) ** 2).sum(dim=1).mean()
+               + 0.95**epoch * ((src_corr - transform_point_cloud(src, rotation_ab, translation_ab)) ** 2).sum(dim=1).view(-1)[ind_mask.view(-1)].mean()
+
+
 
         loss.backward()
         opt.step()
@@ -199,12 +202,12 @@ def train(args, net, train_loader, test_loader):
 
     for epoch in range(args.epochs):
         train_loss, train_rotations_ab, train_translations_ab, train_rotations_ab_pred, train_translations_ab_pred, \
-        train_eulers_ab = train_one_epoch(args, net, train_loader, opt)
+        train_eulers_ab = train_one_epoch(args, net, train_loader, opt, epoch)
 
         scheduler.step()
 
         test_loss, test_rotations_ab, test_translations_ab, test_rotations_ab_pred, \
-        test_translations_ab_pred, test_eulers_ab = test_one_epoch(args, net, test_loader)
+        test_translations_ab_pred, test_eulers_ab = test_one_epoch(args, net, test_loader, epoch)
 
         train_rotations_ab_pred_euler = npmat2euler(train_rotations_ab_pred)
         train_r_mse_ab = np.mean((train_rotations_ab_pred_euler - np.degrees(train_eulers_ab)) ** 2)
@@ -265,7 +268,9 @@ def main():
     ######################## Model Parameters ########################
     parser.add_argument('--alpha_factor', type=float, default=4)
     parser.add_argument('--eps', type=float, default=1e-12)
-    parser.add_argument('--DeepBBS_pp', type=bool, default=False)
+    parser.add_argument('--DeepBBS_pp', dest='DeepBBS_pp', action='store_true')
+    parser.add_argument('--DeepBBS', dest='DeepBBS_pp', action='store_false')
+    parser.set_defaults(DeepBBS_pp=True)
 
     ######################## Training Parameters ########################
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
@@ -300,8 +305,17 @@ def main():
                         help='Pretrained model path')
     parser.add_argument('--eval', action='store_true', default=False,
                         help='evaluate the model')
+    parser.add_argument('--deep_min_diff', type=float, default=0.4, metavar='N')
+    parser.add_argument('--deep_max_iter', type=int, default=5, metavar='N')
+    parser.add_argument('--spatial_min_diff', type=float, default=0.01, metavar='N')
+    parser.add_argument('--spatial_min_iter', type=int, default=30, metavar='N')
+    parser.add_argument('--spatial_max_iter', type=int, default=45, metavar='N')
 
     args = parser.parse_args()
+
+    args.iterative_convergence = {'deep_min_diff': args.deep_min_diff, 'deep_max_iter': args.deep_max_iter,
+                                  'spatial_min_diff': args.spatial_min_diff, 'spatial_min_iter': args.spatial_min_iter,
+                                  'spatial_max_iter': args.spatial_max_iter}
 
     torch.backends.cudnn.deterministic = True
     torch.manual_seed(args.seed)

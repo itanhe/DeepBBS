@@ -18,7 +18,7 @@ System requirments:
 - scikit-learn=0.23.2
 - tqdm
 
-or can be install the environment.yml file:
+or it can be installed with the environment.yml file:
 ```shell
 conda env create -f environment.yml
 ```
